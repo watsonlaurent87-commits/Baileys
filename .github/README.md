@@ -1,4 +1,43 @@
-<h1><img alt="Baileys logo" src="https://raw.githubusercontent.com/WhiskeySockets/Baileys/refs/heads/master/Media/logo.png" height="75"/></h1>
+connect whatsApp PHONE_NUMBER_ID = 123456789012345
+WHATSAPP_TOKEN = EAAXXXXXXXXXXXXX
+VERIFY_TOKEN = mon_token_verify<h1><img alt="Baileys logo" src="https://raw.githubusercontent.com/WhiskeySockets/Baileys/refs/heads/master/Media/logo.png" height="75"/></h1>// --- Anti-spam system ---
+const spamCount = {};
+const SPAM_LIMIT = 5; // max 5 messages
+const SPAM_INTERVAL = 10000; // 10 seconds
+
+sock.ev.on("messages.upsert", async (m) => {
+  const msg = m.messages[0];
+  if (!msg.message || msg.key.fromMe) return;
+
+  const from = msg.key.remoteJid;
+  const sender = msg.key.participant || msg.key.remoteJid;
+
+  // Si se yon gwoup
+  if (from.endsWith("@g.us")) {
+    if (!spamCount[sender]) {
+      spamCount[sender] = { count: 1, time: Date.now() };
+    } else {
+      const diff = Date.now() - spamCount[sender].time;
+      if (diff < SPAM_INTERVAL) {
+        spamCount[sender].count++;
+      } else {
+        spamCount[sender] = { count: 1, time: Date.now() };
+      }
+
+      // Si moun nan depase limit
+      if (spamCount[sender].count >= SPAM_LIMIT) {
+        await sock.sendMessage(from, {
+          text: `⚠️ *@${sender.split("@")[0]}*, w ap spam gwoup la! Ou pral retire.`,
+          mentions: [sender],
+        });
+
+        // Kick user la
+        await sock.groupParticipantsUpdate(from, [sender], "remove");
+        delete spamCount[sender];
+      }
+    }
+  }
+});
 
 
 > [!CAUTION]
@@ -10,7 +49,7 @@
 
 Baileys is a WebSockets-based TypeScript library for interacting with the WhatsApp Web API.
 
-Join the WhiskeySockets community via the link: https://whiskey.so/discord
+Join the WhiskeySockets community via the link: https://whiskey.github.com
 
 
 > [!IMPORTANT]
@@ -70,4 +109,60 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Thus, the maintainers of the project can't be held liable for any potential misuse of this project.
+Thus, the maintainers of the project can't be held liable for any potential misuse of this project.import makeWASocket, { useMultiFileAuthState } from "@whiskeysockets/baileys";
+
+const startBot = async () => {
+  const { state, saveCreds } = await useMultiFileAuthState("auth");
+  const sock = makeWASocket({ auth: state });
+
+  sock.ev.on("creds.update", saveCreds);
+  sock.ev.on("messages.upsert", async (m) => {
+    const msg = m.messages[0];
+    if (!msg.message) return;
+
+    const from = msg.key.remoteJid;
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+
+    if (text === "!menu") {
+      await sock.sendMessage(from, { text: "📋 Meni Bot la:\n!tagall\n!ban\n!promote\n!demote\n!help" });
+    }
+
+    if (text === "!tagall") {
+      const metadata = await sock.groupMetadata(from);
+      const mentions = metadata.participants.map(p => p.id);
+      const names = mentions.map(m => "@" + m.split("@")[0]).join(" ");
+      await sock.sendMessage(from, { text: `👥 Tag tout moun:\n${names}`, mentions });
+    }
+  });
+};
+
+startBot();anti-spam
+anti-ban<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    /title>
+    <style>
+      body { font-family: sans-serif; text-align: center; padding: 20px; }
+      #chat { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: scroll; margin-bottom: 10px; }
+    </style>
+  </head>
+  <body>
+    <h2>Byenveni nan Chatbot Kreyòl mwen 🤖</h2>
+    <div id="chat"></div>
+    <input id="msg" placeholder="Ekri mesaj ou..." />
+    <button onclick="send()">Voye</button>
+
+    <script>
+      function send() {
+        let msg = document.getElementById("msg").value;
+        let chat = document.getElementById("chat");
+        chat.innerHTML += "<p><b>Ou:</b> " + msg + "</p>";
+        // Repons senp bot la
+        let reply = "Bot: Mwen resevwa '" + msg + "'";
+        chat.innerHTML += "<p>" + reply + "</p>";
+        document.getElementById("msg").value = "";
+      }
+    </script>
+  </body>
+</html>
